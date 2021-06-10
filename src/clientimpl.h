@@ -14,6 +14,7 @@
 #include <boost/asio/io_service.hpp>
 
 #include "redisvalue.h"
+#include "redisbuffer.h"
 
 namespace redisclient{
 class RedisClientImpl{
@@ -28,8 +29,27 @@ public:
         };
     RedisClientImpl(boost::asio::io_service &ioService);
     ~RedisClientImpl();
-    inline void close() noexcept;
+    void close() noexcept;
     inline State getState() const;
+
+    static std::vector<char> makeCommand(const std::deque<RedisBuffer> &items);
+
+    RedisValue doSyncCommand(const std::deque<RedisBuffer> &command,
+        const boost::posix_time::time_duration &timeout,
+        boost::system::error_code &ec);
+    
+    // 同步发送命令，使用pipeline发送
+    RedisValue doSyncCommand(const std::deque<std::deque<RedisBuffer>> &commands,
+        const boost::posix_time::time_duration &timeout,
+        boost::system::error_code &ec);
+    
+    RedisValue syncReadResponse(
+            const boost::posix_time::time_duration &timeout,
+            boost::system::error_code &ec);
+
+    inline void doAsyncCommand(
+            std::vector<char> buff,
+            std::function<void(RedisValue)> handler);
 private:
     boost::asio::io_service &ioService;  
     boost::asio::io_service::strand strand;
@@ -54,6 +74,30 @@ private:
 
     std::function<void(const std::string &)> errorHandler;   // 错误状态处理
 };
+
+inline std::string to_string(RedisClientImpl::State state)
+{
+    switch(state)
+    {
+        case RedisClientImpl::State::Unconnected:
+            return "Unconnected";
+            break;
+        case RedisClientImpl::State::Connecting:
+            return "Connecting";
+            break;
+        case RedisClientImpl::State::Connected:
+            return "Connected";
+            break;
+        case RedisClientImpl::State::Subscribed:
+            return "Subscribed";
+            break;
+        case RedisClientImpl::State::Closed:
+            return "Closed";
+            break;
+    }
+
+    return "Invalid";
+}
 }
 
 #endif

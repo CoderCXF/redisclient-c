@@ -1,5 +1,145 @@
 #include "src/clientimpl.h"
 
+// 公共函数
+// buffer append
+// socketread/socketwrite
+namespace {
+    // append to buffer
+    static const char crlf[] = {'\r', '\n'};
+    inline void bufferAppend(std::vector<char> &vec, const std::string &s);      // 将s添加至字符数组中
+    inline void bufferAppend(std::vector<char> &vec, const std::vector<char> &s);
+    inline void bufferAppend(std::vector<char> &vec, const char *s);
+    inline void bufferAppend(std::vector<char> &vec, char c);
+
+    template<size_t size>
+    inline void bufferAppend(std::vector<char> &vec, const char (&s)[size]);
+
+    inline void bufferAppend(std::vector<char> &vec, const redisclient::RedisBuffer &buf)
+    {
+        if (buf.data.type() == typeid(std::string))
+            bufferAppend(vec, boost::get<std::string>(buf.data));
+        else
+            bufferAppend(vec, boost::get<std::vector<char>>(buf.data));
+    }
+
+    inline void bufferAppend(std::vector<char> &vec, const std::string &s)
+    {
+        vec.insert(vec.end(), s.begin(), s.end());
+    }
+
+    inline void bufferAppend(std::vector<char> &vec, const std::vector<char> &s)
+    {
+        vec.insert(vec.end(), s.begin(), s.end());
+    }
+
+    inline void bufferAppend(std::vector<char> &vec, const char *s)
+    {
+        vec.insert(vec.end(), s, s + strlen(s));
+    }
+
+    inline void bufferAppend(std::vector<char> &vec, char c)
+    {
+        vec.resize(vec.size() + 1);
+        vec[vec.size() - 1] = c;
+    }
+
+    template<size_t size>
+    inline void bufferAppend(std::vector<char> &vec, const char (&s)[size])
+    {
+        vec.insert(vec.end(), s, s + size);
+    }
+
+    /**
+     * 向服务器端写buffer数据 
+    */
+    ssize_t socketWriteImpl(int socket, const char *buffer, size_t size,
+            size_t timeoutMsec)
+    {
+        struct timeval tv = {static_cast<time_t>(timeoutMsec / 1000),
+            static_cast<__suseconds_t>((timeoutMsec % 1000) * 1000)};
+        int result = setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)); // 设置了发送超时时间
+
+        if (result != 0)
+        {
+            return result;
+        }
+
+        pollfd pfd;
+
+        pfd.fd = socket;
+        pfd.events = POLLOUT; 
+
+        result = ::poll(&pfd, 1, timeoutMsec);
+        if (result > 0)
+        {
+            return send(socket, buffer, size, 0);
+        }
+        else
+        {
+            return result;
+        }
+    }
+
+    size_t socketWrite(int socket, boost::asio::const_buffer buffer,
+            const boost::posix_time::time_duration &timeout,
+            boost::system::error_code &ec)
+    {
+        size_t bytesSend = 0;
+        size_t timeoutMsec = timeout.total_milliseconds();
+
+        while(bytesSend < boost::asio::buffer_size(buffer))
+        {
+            ssize_t result = socketWriteImpl(socket,
+                    boost::asio::buffer_cast<const char *>(buffer) + bytesSend,
+                    boost::asio::buffer_size(buffer) - bytesSend, timeoutMsec);
+
+            if (result < 0)
+            {
+                if (errno == EINTR)
+                {
+                    continue;
+                }
+                else
+                {
+                    ec = boost::system::error_code(errno,
+                            boost::asio::error::get_system_category());
+                    break;
+                }
+            }
+            else if (result == 0)
+            {
+                    // boost::asio::error::connection_reset();
+                    // boost::asio::error::eof
+                    ec = boost::asio::error::eof;
+                    break;
+            }
+            else
+            {
+                bytesSend += result;
+            }
+        }
+
+        return bytesSend;
+    }
+
+    size_t socketWrite(int socket, const std::vector<boost::asio::const_buffer> &buffers,
+            const boost::posix_time::time_duration &timeout,
+            boost::system::error_code &ec)
+    {
+        size_t bytesSend = 0;
+        for(const auto &buffer: buffers)
+        {
+            bytesSend += socketWrite(socket, buffer, timeout, ec);
+
+            if (ec)
+                break;
+        }
+
+        return bytesSend;
+    }
+    
+}
+
 
 namespace redisclient{
 RedisClientImpl::RedisClientImpl(boost::asio::io_service &ioService_) 
@@ -15,7 +155,7 @@ RedisClientImpl::~RedisClientImpl(){
 void RedisClientImpl::close() {
     
     boost::system::error_code ignored_ec;
-    
+
     msgHandlers.clear();
     decltype(handlers)().swap(handlers);
 
@@ -25,5 +165,124 @@ void RedisClientImpl::close() {
 
     state = State::Closed;
 }
+RedisClientImpl::State RedisClientImpl::getState() const {
+    return state;
+}
+
+std::vector<char> RedisClientImpl::makeCommand(const std::deque<RedisBuffer> &items)
+{
+    std::vector<char> result;
+
+    bufferAppend(result, '*');
+    bufferAppend(result, std::to_string(items.size()));
+    bufferAppend<>(result, crlf);
+
+    for(const auto &item: items)
+    {
+        bufferAppend(result, '$');
+        bufferAppend(result, std::to_string(item.size()));
+        bufferAppend<>(result, crlf);
+        bufferAppend(result, item);
+        bufferAppend<>(result, crlf);
+    }
+
+    return result;
+}
+
+RedisValue RedisClientImpl::doSyncCommand(const std::deque<RedisBuffer> &command,
+        const boost::posix_time::time_duration &timeout,
+        boost::system::error_code &ec)
+{
+    std::vector<char> data = makeCommand(command);
+    socketWrite(socket.native_handle(), boost::asio::buffer(data), timeout, ec);
+
+    if( ec )
+    {
+        return RedisValue();
+    }
+
+    return syncReadResponse(timeout, ec);
+}
+
+RedisValue RedisClientImpl::doSyncCommand(const std::deque<std::deque<RedisBuffer>> &commands,
+        const boost::posix_time::time_duration &timeout,
+        boost::system::error_code &ec)
+{
+    std::vector<std::vector<char>> data;
+    std::vector<boost::asio::const_buffer> buffers;
+
+    data.reserve(commands.size());
+    buffers.reserve(commands.size());
+
+    for(const auto &command: commands)
+    {
+        data.push_back(makeCommand(command));
+        buffers.push_back(boost::asio::buffer(data.back()));
+    }
+
+    socketWrite(socket.native_handle(), buffers, timeout, ec);
+
+    if( ec )
+    {
+        return RedisValue();
+    }
+
+    std::vector<RedisValue> responses;
+
+    for(size_t i = 0; i < commands.size(); ++i)
+    {
+        responses.push_back(syncReadResponse(timeout, ec));
+
+        if (ec)
+        {
+            return RedisValue();
+        }
+    }
+
+    return RedisValue(std::move(responses));
+}
+
+RedisValue RedisClientImpl::syncReadResponse(
+        const boost::posix_time::time_duration &timeout,
+        boost::system::error_code &ec)
+{
+    for(;;)
+    {
+        if (bufSize == 0)
+        {
+            bufSize = socketReadSome(socket.native_handle(),
+                    boost::asio::buffer(buf), timeout, ec);
+
+            if (ec)
+                return RedisValue();
+        }
+
+        for(size_t pos = 0; pos < bufSize;)
+        {
+            std::pair<size_t, RedisParser::ParseResult> result =
+                redisParser.parse(buf.data() + pos, bufSize - pos);
+
+            pos += result.first;
+
+            ::memmove(buf.data(), buf.data() + pos, bufSize - pos);
+            bufSize -= pos;
+
+            if( result.second == RedisParser::Completed )
+            {
+                return redisParser.result();
+            }
+            else if( result.second == RedisParser::Incompleted )
+            {
+                continue;
+            }
+            else
+            {
+                errorHandler("[RedisClient] Parser error");
+                return RedisValue();
+            }
+        }
+    }
+}
+
 
 }
