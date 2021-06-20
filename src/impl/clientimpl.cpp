@@ -48,6 +48,80 @@ namespace {
     {
         vec.insert(vec.end(), s, s + size);
     }
+    /**
+    * socket read from redis server
+    * why use poll ?
+    */
+    ssize_t socketReadSomeImpl(int socket, char *buffer, size_t size,   // 读取socket至buffer中(这是客户端？？？)
+            size_t timeoutMsec)   
+    {
+        struct timeval tv = {static_cast<time_t>(timeoutMsec / 1000),
+            static_cast<__suseconds_t>((timeoutMsec % 1000) * 1000)};
+        int result = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+        if (result != 0)
+        {
+            return result;
+        }
+
+        pollfd pfd;
+
+        pfd.fd = socket;
+        pfd.events = POLLIN;
+
+        result = ::poll(&pfd, 1, timeoutMsec);  // 使用poll
+        if (result > 0)
+        {
+            return recv(socket, buffer, size, MSG_DONTWAIT);  // 阻塞0.5s，设置为临时非阻塞
+        }
+        else
+        {
+            return result;
+        }
+    }
+
+    size_t socketReadSome(int socket, boost::asio::mutable_buffer buffer,
+            const boost::posix_time::time_duration &timeout,
+            boost::system::error_code &ec)
+    {
+        size_t bytesRecv = 0;
+        size_t timeoutMsec = timeout.total_milliseconds();
+
+        for(;;)   //非阻塞模式
+        {
+            ssize_t result = socketReadSomeImpl(socket,
+                    boost::asio::buffer_cast<char *>(buffer) + bytesRecv,
+                    boost::asio::buffer_size(buffer) - bytesRecv, timeoutMsec);
+
+            if (result < 0)   // 非阻塞模式，读至EINTR系统调用
+            {
+                if (errno == EINTR)
+                {
+                    continue;
+                }
+                else
+                {
+                    ec = boost::system::error_code(errno,
+                            boost::asio::error::get_system_category());
+                    break;
+                }
+            }
+            else if (result == 0)   // 服务器关闭
+            {
+                // boost::asio::error::connection_reset();
+                // boost::asio::error::eof
+                ec = boost::asio::error::eof;
+                break;
+            }
+            else
+            {
+                bytesRecv += result;
+                break;
+            }
+        }
+
+        return bytesRecv;
+    }
 
     /**
      * 向服务器端写buffer数据 
@@ -137,9 +211,7 @@ namespace {
 
         return bytesSend;
     }
-    
 }
-
 
 namespace redisclient{
 RedisClientImpl::RedisClientImpl(boost::asio::io_service &ioService_) 
@@ -165,6 +237,7 @@ void RedisClientImpl::close() {
 
     state = State::Closed;
 }
+
 RedisClientImpl::State RedisClientImpl::getState() const {
     return state;
 }
