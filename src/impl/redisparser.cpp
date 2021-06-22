@@ -53,20 +53,20 @@ std::pair<size_t, RedisParser::ParseResult> RedisParser::parseChunk(const char *
                 buf.clear();
                 switch(c)
                 {
-                    case stringReply:
+                    case stringReply: // +
                         state = String;
                         break;
-                    case errorReply:
+                    case errorReply:   // -
                         state = ErrorString;
                         break;
-                    case integerReply:
+                    case integerReply:  //:
                         state = Integer;
                         break;
-                    case bulkReply:
+                    case bulkReply:    // $
                         state = BulkSize;
                         bulkSize = 0;
                         break;
-                    case arrayReply:
+                    case arrayReply:   // *
                         state = ArraySize;
                         break;
                     default:

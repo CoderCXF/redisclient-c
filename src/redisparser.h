@@ -72,7 +72,7 @@ private:
     std::stack<State> states;
 
     long int bulkSize;
-    std::vector<char> buf;
+    std::vector<char> buf;    // 这就是buffer
     RedisValue redisValue;
 
     // temporary variables
