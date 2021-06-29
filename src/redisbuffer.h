@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-// #include "config.h"
-
 namespace redisclient {
 
 struct RedisBuffer

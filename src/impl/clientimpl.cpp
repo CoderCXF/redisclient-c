@@ -52,13 +52,19 @@ namespace {
     * socket read from redis server
     * why use poll ?
     */
+    // 因为我们需要将客户端的命令发送给服务器，
+    // 所以我们的程序相当于是一个中介
+    // 读取客户端socket想要指向的命令（使用poll）至buffer中，这就是socketReadSome的工作
+    // 然后将保存命令的buffer发送给Redis服务器，让Redis服务器去执行这些命令，这就是socketWrite的工作
     ssize_t socketReadSomeImpl(int socket, char *buffer, size_t size,   // 读取socket至buffer中(这是客户端？？？)
             size_t timeoutMsec)   
     {
         struct timeval tv = {static_cast<time_t>(timeoutMsec / 1000),
             static_cast<__suseconds_t>((timeoutMsec % 1000) * 1000)};
+        // 设置读取超时时间
         int result = setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
+        // 如果设置失败的话
         if (result != 0)
         {
             return result;
@@ -66,7 +72,7 @@ namespace {
 
         pollfd pfd;
 
-        pfd.fd = socket;
+        pfd.fd = socket;  // 监听客户端的读事件
         pfd.events = POLLIN;
 
         result = ::poll(&pfd, 1, timeoutMsec);  // 使用poll
@@ -124,7 +130,7 @@ namespace {
     }
 
     /**
-     * 向服务器端写buffer数据 
+     * 向服务器端写保存命令的buffer数据 （也就是将客户端的命令发送给服务端）
     */
     ssize_t socketWriteImpl(int socket, const char *buffer, size_t size,
             size_t timeoutMsec)
@@ -140,6 +146,7 @@ namespace {
 
         pollfd pfd;
 
+        // 监听客户端的写事件？？？
         pfd.fd = socket;
         pfd.events = POLLOUT; 
 
@@ -273,7 +280,7 @@ RedisValue RedisClientImpl::doSyncCommand(const std::deque<RedisBuffer> &command
     {
         return RedisValue();
     }
-
+    // 返回的是Redis读取结果
     return syncReadResponse(timeout, ec);
 }
 
@@ -315,6 +322,7 @@ RedisValue RedisClientImpl::doSyncCommand(const std::deque<std::deque<RedisBuffe
     return RedisValue(std::move(responses));
 }
 
+// 从Redis服务器读取命令执行结果
 RedisValue RedisClientImpl::syncReadResponse(
         const boost::posix_time::time_duration &timeout,
         boost::system::error_code &ec)
@@ -323,6 +331,7 @@ RedisValue RedisClientImpl::syncReadResponse(
     {
         if (bufSize == 0)
         {
+            // bufSize就是
             bufSize = socketReadSome(socket.native_handle(),
                     boost::asio::buffer(buf), timeout, ec);
 

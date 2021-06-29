@@ -24,7 +24,7 @@ public:
     REDIS_CLIENT_DECL Pipeline(RedisSyncClient &client);
 
     // add command to pipe
-    inline Pipeline &command(std::string cmd, std::deque<RedisBuffer> args);
+    REDIS_CLIENT_DECL Pipeline &command(std::string cmd, std::deque<RedisBuffer> args);
 
     // Sends all commands to the redis server.
     // For every request command will get response value.
@@ -42,8 +42,8 @@ public:
     //  result[1];  // value of the key "bar"
     //  result[2];  // value of the key "more"
     //
-    inline RedisValue finish();
-    inline RedisValue finish(boost::system::error_code &ec);
+    REDIS_CLIENT_DECL RedisValue finish();
+    REDIS_CLIENT_DECL RedisValue finish(boost::system::error_code &ec);
 
 private:
     std::deque<std::deque<RedisBuffer>> commands;
@@ -51,4 +51,8 @@ private:
 };
 
 }
+
+#ifdef REDIS_CLIENT_HEADER_ONLY
+#include "redisclient/impl/pipeline.cpp"
+#endif
 
