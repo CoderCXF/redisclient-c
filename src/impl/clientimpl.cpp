@@ -48,14 +48,8 @@ namespace {
     {
         vec.insert(vec.end(), s, s + size);
     }
-    /**
-    * socket read from redis server
-    * why use poll ?
-    */
-    // 因为我们需要将客户端的命令发送给服务器，
-    // 所以我们的程序相当于是一个中介
-    // 读取客户端socket想要指向的命令（使用poll）至buffer中，这就是socketReadSome的工作
-    // 然后将保存命令的buffer发送给Redis服务器，让Redis服务器去执行这些命令，这就是socketWrite的工作
+
+    // socket就是服务端套接字
     ssize_t socketReadSomeImpl(int socket, char *buffer, size_t size,   // 读取socket至buffer中(这是客户端？？？)
             size_t timeoutMsec)   
     {
@@ -72,8 +66,8 @@ namespace {
 
         pollfd pfd;
 
-        pfd.fd = socket;  // 监听客户端的读事件
-        pfd.events = POLLIN;
+        pfd.fd = socket;     // 监听服务器的读事件（意味着服务器有信息要到）
+        pfd.events = POLLIN; 
 
         result = ::poll(&pfd, 1, timeoutMsec);  // 使用poll
         if (result > 0)

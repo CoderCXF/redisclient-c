@@ -43,6 +43,7 @@ RedisSyncClient::~RedisSyncClient()
 
 void RedisSyncClient::connect(const boost::asio::ip::tcp::endpoint &endpoint)
 {
+    // 捕获系统error
     boost::system::error_code ec;
 
     connect(endpoint, ec);
@@ -52,77 +53,54 @@ void RedisSyncClient::connect(const boost::asio::ip::tcp::endpoint &endpoint)
 void RedisSyncClient::connect(const boost::asio::ip::tcp::endpoint &endpoint,
     boost::system::error_code &ec)
 {
-    pimpl->socket.open(endpoint.protocol(), ec);
-
-    if (!ec && tcpNoDelay)   // 禁用Nagle算法，因为每次发送的命令，例如GET、SET都是简短的字符串。
-        pimpl->socket.set_option(boost::asio::ip::tcp::no_delay(true), ec);
-
-    // TODO keep alive option
-
-    // boost asio does not support `connect` with timeout
+    pimpl->socket(endpoint.protocol(), ec);
+    if (!ec && tcpNoDelay) {
+        pimpl->socket.setsockopt(boost::asio::ip::no_delay(true), ec);
+    }
+    // 
     int socket = pimpl->socket.native_handle();
-    struct sockaddr_in addr;
 
-    addr.sin_family = AF_INET;                    // 现在写的是客户端，需要的是对端（服务器）的地址结构
+    // 服务端套接字地址结构
+    struct socketaddr_in addr;
+    addr.sin_family = AF_INET;
     addr.sin_port = htons(endpoint.port());
     addr.sin_addr.s_addr = inet_addr(endpoint.address().to_string().c_str());
 
-    // Set non-blocking
-    // 标准的设置非阻塞模式步骤
-    int arg = 0;
-    if ((arg = fcntl(socket, F_GETFL, NULL)) < 0)
-    {
-        ec = boost::system::error_code(errno,
-                boost::asio::error::get_system_category());
+    // 将套接字设置为非阻塞模式
+    int flag = 0;
+    if ((flag = fcntl(socket, F_GETFL, NULL)) < 0) {
+        ec = boost::system::error_code(errno, boost::system::error::get_system_category());
         return;
     }
 
-    arg |= O_NONBLOCK;
-
-    if (fcntl(socket, F_SETFL, arg) < 0)
-    {
-        ec = boost::system::error_code(errno,
-                boost::asio::error::get_system_category());
+    flag |= O_NONBLOCK;
+    if (fcntl(socket, F_SETFL, flag) < 0) {
+        ec = boost::system::error_code(errno, boost::system::error::get_system_category());
         return;
     }
 
-    
     int result = ::connect(socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-    // 因为我们使用的是非阻塞模式，所以如果是返回-1的话并不代表连接失败
-    if (result < 0)
-    {
+    if (result < 0) {
         // 当我们以非阻塞的方式来进行连接的时候，返回的结果如果是 -1,这并不代表这次连接发生了错误，如果它的返回结果是 EINPROGRESS，
         // 那么就代表连接还在进行中。 后面可以通过poll或者select来判断socket是否可写，如果可以写，说明连接完成了。
-        if (errno == EINPROGRESS)
-        {
-            for(;;)  // 非阻塞模式，需要死循环进行监听
-            {
-                //selecting
-                pollfd pfd;
-                pfd.fd = socket;
-                pfd.events = POLLOUT;
+        if (errno == EINPROGRESS) {
+            for (;;) {
+            pollfd pfd;
+            pfd.fd = socket;
+            pfd.events = POLLOUT;
 
-                // 判断是否可写
-                result = ::poll(&pfd, 1, connectTimeout.total_milliseconds());
-                // 如果也不可写的话
-                if (result < 0)
-                {
-                    if (errno == EINTR)
-                    {
-                        // try again
-                        continue;
-                    }
-                    else
-                    {
-                        ec = boost::system::error_code(errno,
-                                boost::asio::error::get_system_category());
-                        return;
-                    }
+            // 判断是否可写
+            result = ::poll(&pfd, 1, connectTimeout.total_milliseconds());
+            if (result < 0) {
+                if (errno == EINTR) {
+                    continue;
+                } else {
+                    ec = boost::system::error_code(errno, boost::system::error::get_system_category());
+                    return;
                 }
-                // 如果可写的话，说明是连接成功了
-                else if (result > 0)
-                {
-                    // check for error
+            }
+            else if (result > 0) {
+                                    // check for error
                     int valopt;
                     socklen_t optlen = sizeof(valopt);
 
@@ -144,15 +122,13 @@ void RedisSyncClient::connect(const boost::asio::ip::tcp::endpoint &endpoint,
 
                     break;
                 }
-                else
+            else
                 {
                     // timeout
                     ec = boost::system::error_code(ETIMEDOUT,
                             boost::asio::error::get_system_category());
                     return;
                 }
-            }
-        }
         else
         {
             ec = boost::system::error_code(errno,
@@ -216,6 +192,7 @@ void RedisSyncClient::disconnect()
 {
     pimpl->close();
 }
+
 // 加入错误处理函数
 void RedisSyncClient::installErrorHandler(
         std::function<void(const std::string &)> handler)
@@ -237,24 +214,16 @@ RedisValue RedisSyncClient::command(std::string cmd, std::deque<RedisBuffer> arg
 RedisValue RedisSyncClient::command(std::string cmd, std::deque<RedisBuffer> args,
             boost::system::error_code &ec)
 {
-    // 如果状态有效的话
-    if(stateValid())
-    {
-        // 把命令放在队列的头部一起一起发送出去
+    if (stateValid()) {
         args.push_front(std::move(cmd));
-        // 内部调用Impl::socketWrite一起发送至redis server
-        // 并且要设置一个命令的超时时长
         return pimpl->doSyncCommand(args, commandTimeout, ec);
-    }
-    
-    // 如果是无效状态的话，直接调用RedisValue这个构造函数，返回一个空值NULLtag
-    else
-    {
+        // 如果状态武侠的话，就返回一个空构造
+    } else {
         return RedisValue();
     }
 }
 
-// pipeline发送
+
 Pipeline RedisSyncClient::pipelined()
 {
     Pipeline pipe(*this);
@@ -276,18 +245,16 @@ RedisValue RedisSyncClient::pipelined(std::deque<std::deque<RedisBuffer>> comman
     if(stateValid())
     {
         return pimpl->doSyncCommand(commands, commandTimeout, ec);
-    }
-    else
-    {
+    } else {
         return RedisValue();
     }
 }
-// 获取状态
+
 RedisSyncClient::State RedisSyncClient::state() const
 {
-    return pimpl->getState();
+    return impl->getState();
 }
-// 设置状态有效 bool 类型
+
 bool RedisSyncClient::stateValid() const
 {
     assert( state() == State::Connected );
