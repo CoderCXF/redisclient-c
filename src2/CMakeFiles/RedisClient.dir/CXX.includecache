@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/cxf/Desktop/redisclient-c/src/impl/redisparser.cpp
+sstream
+-
+assert.h
+-
+iostream
+-
+../redisparser.h
+/home/cxf/Desktop/redisclient-c/src/redisparser.h
+
+/home/cxf/Desktop/redisclient-c/src/redisparser.h
+stack
+-
+vector
+-
+utility
+-
+redisvalue.h
+/home/cxf/Desktop/redisclient-c/src/redisvalue.h
+redisclient/impl/redisparser.cpp
+/home/cxf/Desktop/redisclient-c/src/redisclient/impl/redisparser.cpp
+
+/home/cxf/Desktop/redisclient-c/src/redisvalue.h
+boost/variant.hpp
+-
+string
+-
+vector
+-
+
