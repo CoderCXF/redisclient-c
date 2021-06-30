@@ -47,7 +47,7 @@ public:
 
 private:
     std::deque<std::deque<RedisBuffer>> commands;
-    RedisSyncClient &client;     // pipeline只用于同步客户端
+    RedisSyncClient &client;     // pipeline只用于同步方式
 };
 
 }

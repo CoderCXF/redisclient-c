@@ -25,6 +25,8 @@ Pipeline &Pipeline::command(std::string cmd, std::deque<RedisBuffer> args)
     return *this;
 }
 
+// finish
+// 调用redissyncclient-->doSyncCommand
 RedisValue Pipeline::finish()
 {
     return client.pipelined(std::move(commands));
