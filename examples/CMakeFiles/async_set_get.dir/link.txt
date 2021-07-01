@@ -1,0 +1,1 @@
+/usr/bin/c++  -W -Wall -Wextra -pthread -O3 -DNDEBUG -O3 -DNDEBUG -rdynamic CMakeFiles/async_set_get.dir/async_set_get.cpp.o -o async_set_get  -Wl,-rpath,/home/cxf/Desktop/redisclient-c/src/redisclient ../src/redisclient/libRedisClient.so.1.0.2 -lboost_date_time -lboost_system 

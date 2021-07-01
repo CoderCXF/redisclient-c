@@ -188,6 +188,136 @@ RedisClient/fast:
 	$(MAKE) $(MAKESILENT) -f src/redisclient/CMakeFiles/RedisClient.dir/build.make src/redisclient/CMakeFiles/RedisClient.dir/build
 .PHONY : RedisClient/fast
 
+#=============================================================================
+# Target rules for targets named async_set_get2
+
+# Build rule for target.
+async_set_get2: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 async_set_get2
+.PHONY : async_set_get2
+
+# fast build rule for target.
+async_set_get2/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/async_set_get2.dir/build.make examples/CMakeFiles/async_set_get2.dir/build
+.PHONY : async_set_get2/fast
+
+#=============================================================================
+# Target rules for targets named async_pubsub
+
+# Build rule for target.
+async_pubsub: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 async_pubsub
+.PHONY : async_pubsub
+
+# fast build rule for target.
+async_pubsub/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/async_pubsub.dir/build.make examples/CMakeFiles/async_pubsub.dir/build
+.PHONY : async_pubsub/fast
+
+#=============================================================================
+# Target rules for targets named async_pubsub2
+
+# Build rule for target.
+async_pubsub2: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 async_pubsub2
+.PHONY : async_pubsub2
+
+# fast build rule for target.
+async_pubsub2/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/async_pubsub2.dir/build.make examples/CMakeFiles/async_pubsub2.dir/build
+.PHONY : async_pubsub2/fast
+
+#=============================================================================
+# Target rules for targets named async_set_get
+
+# Build rule for target.
+async_set_get: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 async_set_get
+.PHONY : async_set_get
+
+# fast build rule for target.
+async_set_get/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/async_set_get.dir/build.make examples/CMakeFiles/async_set_get.dir/build
+.PHONY : async_set_get/fast
+
+#=============================================================================
+# Target rules for targets named async_timeout
+
+# Build rule for target.
+async_timeout: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 async_timeout
+.PHONY : async_timeout
+
+# fast build rule for target.
+async_timeout/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/async_timeout.dir/build.make examples/CMakeFiles/async_timeout.dir/build
+.PHONY : async_timeout/fast
+
+#=============================================================================
+# Target rules for targets named sync_set_get
+
+# Build rule for target.
+sync_set_get: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sync_set_get
+.PHONY : sync_set_get
+
+# fast build rule for target.
+sync_set_get/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/sync_set_get.dir/build.make examples/CMakeFiles/sync_set_get.dir/build
+.PHONY : sync_set_get/fast
+
+#=============================================================================
+# Target rules for targets named sync_pipeline
+
+# Build rule for target.
+sync_pipeline: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sync_pipeline
+.PHONY : sync_pipeline
+
+# fast build rule for target.
+sync_pipeline/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/sync_pipeline.dir/build.make examples/CMakeFiles/sync_pipeline.dir/build
+.PHONY : sync_pipeline/fast
+
+#=============================================================================
+# Target rules for targets named benchmark
+
+# Build rule for target.
+benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 benchmark
+.PHONY : benchmark
+
+# fast build rule for target.
+benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/benchmark.dir/build.make examples/CMakeFiles/benchmark.dir/build
+.PHONY : benchmark/fast
+
+#=============================================================================
+# Target rules for targets named sync_benchmark
+
+# Build rule for target.
+sync_benchmark: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sync_benchmark
+.PHONY : sync_benchmark
+
+# fast build rule for target.
+sync_benchmark/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/sync_benchmark.dir/build.make examples/CMakeFiles/sync_benchmark.dir/build
+.PHONY : sync_benchmark/fast
+
+#=============================================================================
+# Target rules for targets named sync_timeout
+
+# Build rule for target.
+sync_timeout: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 sync_timeout
+.PHONY : sync_timeout
+
+# fast build rule for target.
+sync_timeout/fast:
+	$(MAKE) $(MAKESILENT) -f examples/CMakeFiles/sync_timeout.dir/build.make examples/CMakeFiles/sync_timeout.dir/build
+.PHONY : sync_timeout/fast
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -201,6 +331,16 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... RedisClient"
+	@echo "... async_pubsub"
+	@echo "... async_pubsub2"
+	@echo "... async_set_get"
+	@echo "... async_set_get2"
+	@echo "... async_timeout"
+	@echo "... benchmark"
+	@echo "... sync_benchmark"
+	@echo "... sync_pipeline"
+	@echo "... sync_set_get"
+	@echo "... sync_timeout"
 .PHONY : help
 
 

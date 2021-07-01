@@ -1,0 +1,1 @@
+/usr/bin/c++  -W -Wall -Wextra -pthread -O3 -DNDEBUG -O3 -DNDEBUG -rdynamic CMakeFiles/sync_benchmark.dir/sync_benchmark.cpp.o -o sync_benchmark  -Wl,-rpath,/home/cxf/Desktop/redisclient-c/src/redisclient -lboost_date_time ../src/redisclient/libRedisClient.so.1.0.2 -lboost_program_options -lboost_system 

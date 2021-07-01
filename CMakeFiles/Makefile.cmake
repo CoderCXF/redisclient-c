@@ -15,6 +15,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "cmake/Install.cmake"
   "cmake/Utils.cmake"
   "cmake/config/Config.cmake.in"
+  "examples/CMakeLists.txt"
   "src/CMakeLists.txt"
   "src/redisclient/CMakeLists.txt"
   "/usr/local/share/cmake-3.19/Modules/BasicConfigVersion-AnyNewerVersion.cmake.in"
@@ -57,9 +58,20 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "src/CMakeFiles/CMakeDirectoryInformation.cmake"
   "src/redisclient/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "examples/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "src/redisclient/CMakeFiles/RedisClient.dir/DependInfo.cmake"
+  "examples/CMakeFiles/async_set_get2.dir/DependInfo.cmake"
+  "examples/CMakeFiles/async_pubsub.dir/DependInfo.cmake"
+  "examples/CMakeFiles/async_pubsub2.dir/DependInfo.cmake"
+  "examples/CMakeFiles/async_set_get.dir/DependInfo.cmake"
+  "examples/CMakeFiles/async_timeout.dir/DependInfo.cmake"
+  "examples/CMakeFiles/sync_set_get.dir/DependInfo.cmake"
+  "examples/CMakeFiles/sync_pipeline.dir/DependInfo.cmake"
+  "examples/CMakeFiles/benchmark.dir/DependInfo.cmake"
+  "examples/CMakeFiles/sync_benchmark.dir/DependInfo.cmake"
+  "examples/CMakeFiles/sync_timeout.dir/DependInfo.cmake"
   )
